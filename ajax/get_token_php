@@ -1,0 +1,32 @@
+<?php
+// Arquivo: ajax/get_token.php
+
+include('../../../inc/includes.php');
+
+// Verificar se o usuário está logado
+Session::checkLoginUser();
+
+// Verificar permissões
+Session::checkRight("powerbireports", READ);
+
+use GlpiPlugin\Powerbireports\Config;
+
+// Define o header para indicar que a resposta é JSON
+header('Content-Type: application/json');
+
+// Tenta obter o token de acesso
+$access_token = Config::generateAccessToken();
+
+if ($access_token) {
+    // Se tivermos um token, retorna sucesso e o token
+    echo json_encode([
+        'success' => true,
+        'token' => $access_token
+    ]);
+} else {
+    // Se falhar, retorna erro
+    echo json_encode([
+        'success' => false,
+        'error' => 'Failed to generate access token. Check plugin configuration.'
+    ]);
+}
