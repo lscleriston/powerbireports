@@ -180,10 +180,49 @@ Cada relatório pode ter um ícone personalizado que será exibido na Central de
 
 ## Atualização de versões anteriores
 
-Se você está atualizando de versões anteriores, execute:
+### Método recomendado (v1.1.0 → v2.1.0)
+
+> **Não desinstale o plugin para atualizar.** A atualização deve ser feita “em cima” da versão atual para preservar configuração e vínculos.
+
+1. **Agende janela de manutenção** (evite uso simultâneo durante a atualização).
+2. **Faça backup do banco e dos arquivos**:
+
+```bash
+mysqldump glpidb > /root/backup_glpidb_before_powerbireports_2_1_0.sql
+cp -a /var/www/glpi/plugins/powerbireports /var/www/glpi/plugins/powerbireports_bkp_2_1_0
+```
+
+3. **Atualize os arquivos do plugin** para a versão nova (Git ou cópia de release).
+
+4. **Execute as migrações SQL**:
+
+```bash
+mysql glpidb < /var/www/glpi/plugins/powerbireports/install/mysql/plugin_powerbireports_permissions.sql
+mysql glpidb < /var/www/glpi/plugins/powerbireports/install/mysql/migration_add_update_fields.sql
+```
+
+5. **Garanta o diretório de ícones**:
+
+```bash
+mkdir -p /var/www/glpi/plugins/powerbireports/pics/icons
+chown www-data:www-data /var/www/glpi/plugins/powerbireports/pics/icons
+chmod 755 /var/www/glpi/plugins/powerbireports/pics/icons
+```
+
+6. **No GLPI**, desative e ative o plugin novamente (ou recarregue o serviço web/caches da aplicação).
+
+7. **Valide o funcionamento**:
+   - Credenciais e geração de token
+   - Listagem e abertura de relatórios
+   - Edição de relatório
+   - Permissões por usuário e grupo
+
+### Migração manual (caso necessário)
+
+Se precisar aplicar migração manualmente, execute:
 
 ```sql
-ALTER TABLE `glpi_plugin_powerbireports_reports` 
+ALTER TABLE `glpi_plugin_powerbireports_reports`
 ADD COLUMN `icon_path` varchar(255) DEFAULT NULL AFTER `description`;
 
 ALTER TABLE `glpi_plugin_powerbireports_reports`
@@ -191,11 +230,7 @@ ADD COLUMN `update_mode` varchar(30) NOT NULL DEFAULT 'api' AFTER `icon_path`,
 ADD COLUMN `update_table` varchar(255) DEFAULT NULL AFTER `update_mode`,
 ADD COLUMN `update_column` varchar(255) DEFAULT NULL AFTER `update_table`,
 ADD COLUMN `dataset_id` varchar(255) DEFAULT NULL AFTER `update_column`;
-```
 
-E crie as tabelas de permissões:
-
-```sql
 CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_users` (
    `id` int(11) NOT NULL AUTO_INCREMENT,
    `plugin_powerbireports_reports_id` int(11) NOT NULL,
@@ -213,12 +248,14 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_groups` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-E crie o diretório para ícones:
+### Rollback (se necessário)
+
+Em caso de falha, restaure backup do banco e pasta do plugin:
 
 ```bash
-mkdir -p /var/www/glpi/plugins/powerbireports/pics/icons
-chown www-data:www-data /var/www/glpi/plugins/powerbireports/pics/icons
-chmod 755 /var/www/glpi/plugins/powerbireports/pics/icons
+mysql glpidb < /root/backup_glpidb_before_powerbireports_2_1_0.sql
+rm -rf /var/www/glpi/plugins/powerbireports
+mv /var/www/glpi/plugins/powerbireports_bkp_2_1_0 /var/www/glpi/plugins/powerbireports
 ```
 
 ## Desinstalação
