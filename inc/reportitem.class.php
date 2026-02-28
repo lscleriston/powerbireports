@@ -379,7 +379,7 @@ class ReportItem extends \CommonDBTM {
     }
 
     /**
-     * Obtém lista de todos os grupos ativos do GLPI
+     * Obtém lista de todos os grupos do GLPI
      */
     public static function getAllGlpiGroups() {
         global $DB;
@@ -390,7 +390,6 @@ class ReportItem extends \CommonDBTM {
             $iterator = $DB->request([
                 'SELECT' => ['id', 'name'],
                 'FROM' => 'glpi_groups',
-                'WHERE' => ['is_active' => 1],
                 'ORDER' => ['name']
             ]);
             
