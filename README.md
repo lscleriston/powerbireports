@@ -1,5 +1,4 @@
-An unexpected error occurred
-Return to previous page# Power BI Reports Plugin para GLPI 11
+# Power BI Reports Plugin para GLPI 11
 
 ## Descrição
 Este plugin permite integrar relatórios do Power BI ao GLPI, funcionando como uma **Central de Relatórios** onde é possível cadastrar e visualizar múltiplos relatórios diretamente na interface do GLPI.
@@ -11,7 +10,8 @@ Este plugin permite integrar relatórios do Power BI ao GLPI, funcionando como u
 - ✅ Visualização de relatórios embutidos na interface do GLPI
 - ✅ Gerenciamento de credenciais (Tenant ID, Client ID, Client Secret)
 - ✅ Cache de tokens para melhor performance
-- ✅ Controle de permissões (READ para visualizar, UPDATE para gerenciar)
+- ✅ Controle de permissões do plugin (READ para visualizar, UPDATE para gerenciar)
+- ✅ Permissões por relatório (segmentação por usuários e grupos)
 
 ## Requisitos
 - GLPI 11.x
@@ -31,6 +31,8 @@ Execute os comandos SQL abaixo no banco de dados do GLPI (geralmente `glpidb`):
 ```bash
 mysql glpidb < /var/www/glpi/plugins/powerbireports/install/mysql/plugin_powerbireports_config.sql
 mysql glpidb < /var/www/glpi/plugins/powerbireports/install/mysql/plugin_powerbireports_reports.sql
+mysql glpidb < /var/www/glpi/plugins/powerbireports/install/mysql/plugin_powerbireports_permissions.sql
+mysql glpidb < /var/www/glpi/plugins/powerbireports/install/mysql/migration_add_update_fields.sql
 ```
 
 Ou execute os scripts SQL diretamente:
@@ -59,9 +61,35 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports` (
   `report_id` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `icon_path` varchar(255) DEFAULT NULL,
+   `update_mode` varchar(30) NOT NULL DEFAULT 'api',
+   `update_table` varchar(255) DEFAULT NULL,
+   `update_column` varchar(255) DEFAULT NULL,
+   `dataset_id` varchar(255) DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de permissões por usuário
+CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_users` (
+   `id` int(11) NOT NULL AUTO_INCREMENT,
+   `plugin_powerbireports_reports_id` int(11) NOT NULL,
+   `users_id` int(11) NOT NULL,
+   PRIMARY KEY (`id`),
+   UNIQUE KEY `unique_report_user` (`plugin_powerbireports_reports_id`,`users_id`),
+   KEY `plugin_powerbireports_reports_id` (`plugin_powerbireports_reports_id`),
+   KEY `users_id` (`users_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de permissões por grupo
+CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_groups` (
+   `id` int(11) NOT NULL AUTO_INCREMENT,
+   `plugin_powerbireports_reports_id` int(11) NOT NULL,
+   `groups_id` int(11) NOT NULL,
+   PRIMARY KEY (`id`),
+   UNIQUE KEY `unique_report_group` (`plugin_powerbireports_reports_id`,`groups_id`),
+   KEY `plugin_powerbireports_reports_id` (`plugin_powerbireports_reports_id`),
+   KEY `groups_id` (`groups_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
@@ -100,6 +128,16 @@ chmod 755 /var/www/glpi/plugins/powerbireports/pics/icons
    - **Icon**: Ícone personalizado para o relatório (opcional).
 3. Clique em **Add Report**.
 4. Repita para adicionar mais relatórios.
+
+### Passo 5: Definir permissões por relatório
+
+1. Em **Configuração > Power BI Reports**, localize a lista de relatórios.
+2. Clique em **Edit** no relatório desejado.
+3. Na seção **Permissões de Visualização**:
+   - Selecione **Usuários Autorizados** e/ou **Grupos Autorizados**.
+4. Clique em **Salvar**.
+
+> Regra de acesso: se nenhum usuário/grupo for definido no relatório, ele fica visível para todos os usuários com direito READ do plugin.
 
 ## Ícones Personalizados
 
@@ -142,11 +180,37 @@ Cada relatório pode ter um ícone personalizado que será exibido na Central de
 
 ## Atualização de versões anteriores
 
-Se você está atualizando de uma versão anterior (sem suporte a ícones), execute o seguinte comando SQL:
+Se você está atualizando de versões anteriores, execute:
 
 ```sql
 ALTER TABLE `glpi_plugin_powerbireports_reports` 
 ADD COLUMN `icon_path` varchar(255) DEFAULT NULL AFTER `description`;
+
+ALTER TABLE `glpi_plugin_powerbireports_reports`
+ADD COLUMN `update_mode` varchar(30) NOT NULL DEFAULT 'api' AFTER `icon_path`,
+ADD COLUMN `update_table` varchar(255) DEFAULT NULL AFTER `update_mode`,
+ADD COLUMN `update_column` varchar(255) DEFAULT NULL AFTER `update_table`,
+ADD COLUMN `dataset_id` varchar(255) DEFAULT NULL AFTER `update_column`;
+```
+
+E crie as tabelas de permissões:
+
+```sql
+CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_users` (
+   `id` int(11) NOT NULL AUTO_INCREMENT,
+   `plugin_powerbireports_reports_id` int(11) NOT NULL,
+   `users_id` int(11) NOT NULL,
+   PRIMARY KEY (`id`),
+   UNIQUE KEY `unique_report_user` (`plugin_powerbireports_reports_id`,`users_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_groups` (
+   `id` int(11) NOT NULL AUTO_INCREMENT,
+   `plugin_powerbireports_reports_id` int(11) NOT NULL,
+   `groups_id` int(11) NOT NULL,
+   PRIMARY KEY (`id`),
+   UNIQUE KEY `unique_report_group` (`plugin_powerbireports_reports_id`,`groups_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 E crie o diretório para ícones:
@@ -167,12 +231,14 @@ chmod 755 /var/www/glpi/plugins/powerbireports/pics/icons
 ```sql
 DROP TABLE IF EXISTS `glpi_plugin_powerbireports_configs`;
 DROP TABLE IF EXISTS `glpi_plugin_powerbireports_reports`;
+DROP TABLE IF EXISTS `glpi_plugin_powerbireports_reports_users`;
+DROP TABLE IF EXISTS `glpi_plugin_powerbireports_reports_groups`;
 ```
 
 Ou via terminal:
 
 ```bash
-mysql -e 'DROP TABLE IF EXISTS glpi_plugin_powerbireports_configs, glpi_plugin_powerbireports_reports;' glpidb
+mysql -e 'DROP TABLE IF EXISTS glpi_plugin_powerbireports_configs, glpi_plugin_powerbireports_reports, glpi_plugin_powerbireports_reports_users, glpi_plugin_powerbireports_reports_groups;' glpidb
 ```
 
 3. Remova os arquivos de ícones:
@@ -205,7 +271,9 @@ powerbireports/
 │   ├── install.php             # Script de instalação
 │   └── mysql/                  # Scripts SQL individuais
 │       ├── plugin_powerbireports_config.sql
-│       └── plugin_powerbireports_reports.sql
+│       ├── plugin_powerbireports_reports.sql
+│       ├── plugin_powerbireports_permissions.sql
+│       └── migration_add_update_fields.sql
 ├── pics/
 │   └── icons/                  # Diretório para ícones dos relatórios
 ├── hook.php                    # Hooks do plugin
@@ -242,8 +310,30 @@ Armazena os relatórios cadastrados.
 | report_id | varchar(255) | ID do relatório no Power BI |
 | description | text | Descrição do relatório |
 | icon_path | varchar(255) | Caminho do ícone personalizado |
+| update_mode | varchar(30) | Fonte de atualização (`api` ou `table_column`) |
+| update_table | varchar(255) | Tabela para leitura de data de atualização |
+| update_column | varchar(255) | Coluna de data de atualização |
+| dataset_id | varchar(255) | Dataset ID do Power BI |
 | created_at | datetime | Data de criação |
 | updated_at | datetime | Data de atualização |
+
+### glpi_plugin_powerbireports_reports_users
+Armazena permissões por usuário para cada relatório.
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | int | Chave primária |
+| plugin_powerbireports_reports_id | int | ID do relatório |
+| users_id | int | ID do usuário GLPI autorizado |
+
+### glpi_plugin_powerbireports_reports_groups
+Armazena permissões por grupo para cada relatório.
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | int | Chave primária |
+| plugin_powerbireports_reports_id | int | ID do relatório |
+| groups_id | int | ID do grupo GLPI autorizado |
 
 ## Troubleshooting
 
