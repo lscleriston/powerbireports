@@ -311,6 +311,7 @@ powerbireports/
 │       ├── plugin_powerbireports_reports.sql
 │       ├── plugin_powerbireports_permissions.sql
 │       └── migration_add_update_fields.sql
+├── upgrade_powerbireports.sh    # Script de atualização automatizada
 ├── pics/
 │   └── icons/                  # Diretório para ícones dos relatórios
 ├── hook.php                    # Hooks do plugin
