@@ -10,6 +10,7 @@
 Thumbs.db
 *.Zone.Identifier
 :Zone.Identifier
+*:Zone.Identifier
 
 # Logs
 *.log

@@ -363,6 +363,12 @@ Em caso de dúvidas ou problemas, entre em contato com o administrador do sistem
 
 ## Changelog
 
+### v2.1.0
+- Adicionada segmentação de visualização por relatório (usuários e grupos)
+- Incluídas tabelas de permissões por relatório (`reports_users` e `reports_groups`)
+- Adicionados campos de atualização por relatório (`update_mode`, `update_table`, `update_column`, `dataset_id`)
+- Atualizada documentação de instalação, upgrade e desinstalação para a nova estrutura
+
 ### v1.1.0
 - Adicionado suporte a ícones personalizados para relatórios
 - Novo script `icon.php` para servir ícones de forma segura
