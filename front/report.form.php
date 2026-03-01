@@ -106,6 +106,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_report'])) {
             }
             ReportItem::syncGroups($report_id, $selected_groups);
             
+            // Atualizar permissões de perfis
+            $selected_profiles = $_POST['_profiles_id'] ?? [];
+            if (!is_array($selected_profiles)) {
+                $selected_profiles = [];
+            }
+            ReportItem::syncProfiles($report_id, $selected_profiles);
+            
             Session::addMessageAfterRedirect(__('Report updated successfully', 'powerbireports'), true, INFO);
         } else {
             Session::addMessageAfterRedirect(__('Error updating report', 'powerbireports'), true, ERROR);
@@ -261,6 +268,36 @@ try {
 }
 
 echo "<br><small style='color:#666;'>" . __('Grupos que podem visualizar este relatório', 'powerbireports') . "</small>";
+echo "</td>";
+echo "</tr>";
+
+// Campo de seleção de perfis
+echo "<tr class='tab_bg_1'>";
+echo "<td>" . __('Perfis Autorizados', 'powerbireports') . "</td>";
+echo "<td>";
+
+try {
+    $current_profiles = ReportItem::getReportProfiles($report_id);
+    $profiles = ReportItem::getAllGlpiProfiles();
+    
+    echo "<select name='_profiles_id[]' multiple style='width:80%; height:150px;'>";
+    if (empty($profiles)) {
+        echo "<option value=''>-- Nenhum perfil cadastrado --</option>";
+    } else {
+        foreach ($profiles as $profile_id => $profile_name) {
+            $selected = in_array($profile_id, $current_profiles) ? ' selected' : '';
+            echo "<option value='" . htmlspecialchars($profile_id) . "'" . $selected . ">" . htmlspecialchars($profile_name) . "</option>";
+        }
+    }
+    echo "</select>";
+} catch (\Throwable $e) {
+    error_log('Erro ao carregar perfis: ' . $e->getMessage());
+    echo "<select name='_profiles_id[]' multiple style='width:80%; height:150px;'>";
+    echo "<option value=''>-- Erro ao carregar perfis --</option>";
+    echo "</select>";
+}
+
+echo "<br><small style='color:#666;'>" . __('Perfis que podem visualizar este relatório', 'powerbireports') . "</small>";
 echo "</td>";
 echo "</tr>";
 

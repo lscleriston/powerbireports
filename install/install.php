@@ -20,7 +20,8 @@ function plugin_powerbireports_runInstall() {
         'glpi_plugin_powerbireports_configs',
         'glpi_plugin_powerbireports_reports',
         'glpi_plugin_powerbireports_reports_users',
-        'glpi_plugin_powerbireports_reports_groups'
+        'glpi_plugin_powerbireports_reports_groups',
+        'glpi_plugin_powerbireports_reports_profiles'
     ];
     
     $all_exist = true;

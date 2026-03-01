@@ -28,7 +28,7 @@ function plugin_init_powerbireports() {
 function plugin_version_powerbireports() {
     return [
         'name'           => __('Power BI Reports', 'powerbireports'),
-        'version'        => '2.1.0',
+        'version'        => '2.2.0',
         'author'         => 'Cleriston Lopes',
         'license'        => 'GPLv3+',
         'homepage'       => 'https://exemplo.com',

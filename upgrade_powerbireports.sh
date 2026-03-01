@@ -88,6 +88,9 @@ run_mysql_query "SOURCE ${PLUGIN_DIR}/install/mysql/plugin_powerbireports_permis
 # Adicionar novos campos na tabela de relatórios (se não existirem)
 run_mysql_query "SOURCE ${PLUGIN_DIR}/install/mysql/migration_add_update_fields.sql;"
 
+# Criar tabela de perfis autorizados (se não existir)
+run_mysql_query "SOURCE ${PLUGIN_DIR}/install/mysql/plugin_powerbireports_profiles.sql;"
+
 log_success "Migrações SQL concluídas."
 
 log_info "Garantindo diretório de ícones..."

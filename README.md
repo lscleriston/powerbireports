@@ -91,6 +91,17 @@ CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_groups` (
    KEY `plugin_powerbireports_reports_id` (`plugin_powerbireports_reports_id`),
    KEY `groups_id` (`groups_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela de permissões por perfil
+CREATE TABLE IF NOT EXISTS `glpi_plugin_powerbireports_reports_profiles` (
+   `id` int(11) NOT NULL AUTO_INCREMENT,
+   `plugin_powerbireports_reports_id` int(11) NOT NULL,
+   `profiles_id` int(11) NOT NULL,
+   PRIMARY KEY (`id`),
+   UNIQUE KEY `unique_report_profile` (`plugin_powerbireports_reports_id`,`profiles_id`),
+   KEY `plugin_powerbireports_reports_id` (`plugin_powerbireports_reports_id`),
+   KEY `profiles_id` (`profiles_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 ### Passo 1.1: Criar diretório para ícones
@@ -134,10 +145,10 @@ chmod 755 /var/www/glpi/plugins/powerbireports/pics/icons
 1. Em **Configuração > Power BI Reports**, localize a lista de relatórios.
 2. Clique em **Edit** no relatório desejado.
 3. Na seção **Permissões de Visualização**:
-   - Selecione **Usuários Autorizados** e/ou **Grupos Autorizados**.
+   - Selecione **Usuários Autorizados**, **Grupos Autorizados** e/ou **Perfis Autorizados**.
 4. Clique em **Salvar**.
 
-> Regra de acesso: se nenhum usuário/grupo for definido no relatório, ele fica visível para todos os usuários com direito READ do plugin.
+> Regra de acesso: se nenhum usuário, grupo ou perfil for definido no relatório, ele fica visível para todos os usuários com direito READ do plugin.
 
 ## Ícones Personalizados
 
@@ -400,6 +411,12 @@ Armazena permissões por grupo para cada relatório.
 Em caso de dúvidas ou problemas, entre em contato com o administrador do sistema.
 
 ## Changelog
+
+### v2.2.0
+- Adicionado controle de acesso por perfis
+- Incluída tabela de permissões por perfil (`reports_profiles`)
+- Atualizada lógica de verificação de permissões para incluir perfis
+- Corrigido bug no carregamento de grupos (remoção de filtro `is_active` inválido)
 
 ### v2.1.0
 - Adicionada segmentação de visualização por relatório (usuários e grupos)

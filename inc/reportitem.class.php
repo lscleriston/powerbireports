@@ -271,7 +271,7 @@ class ReportItem extends \CommonDBTM {
     public static function canUserViewReport($user_id, $report_id) {
         global $DB;
         
-        // Se não há restrições (nenhum usuário ou grupo definido), todos podem ver
+        // Se não há restrições (nenhum usuário, grupo ou perfil definido), todos podem ver
         $has_users = $DB->request([
             'COUNT' => 'cpt',
             'FROM' => 'glpi_plugin_powerbireports_reports_users',
@@ -284,7 +284,13 @@ class ReportItem extends \CommonDBTM {
             'WHERE' => ['plugin_powerbireports_reports_id' => $report_id]
         ])->current()['cpt'] > 0;
         
-        if (!$has_users && !$has_groups) {
+        $has_profiles = $DB->request([
+            'COUNT' => 'cpt',
+            'FROM' => 'glpi_plugin_powerbireports_reports_profiles',
+            'WHERE' => ['plugin_powerbireports_reports_id' => $report_id]
+        ])->current()['cpt'] > 0;
+        
+        if (!$has_users && !$has_groups && !$has_profiles) {
             return true; // Sem restrições, todos podem ver
         }
         
@@ -325,6 +331,33 @@ class ReportItem extends \CommonDBTM {
             ])->current()['cpt'] > 0;
             
             if ($group_allowed) {
+                return true;
+            }
+        }
+        
+        // Verifica se o usuário possui algum perfil autorizado
+        $user_profiles = $DB->request([
+            'SELECT' => ['profiles_id'],
+            'FROM' => 'glpi_profiles_users',
+            'WHERE' => ['users_id' => $user_id]
+        ]);
+        
+        $profiles_ids = [];
+        foreach ($user_profiles as $profile) {
+            $profiles_ids[] = $profile['profiles_id'];
+        }
+        
+        if (!empty($profiles_ids)) {
+            $profile_allowed = $DB->request([
+                'COUNT' => 'cpt',
+                'FROM' => 'glpi_plugin_powerbireports_reports_profiles',
+                'WHERE' => [
+                    'plugin_powerbireports_reports_id' => $report_id,
+                    'profiles_id' => $profiles_ids
+                ]
+            ])->current()['cpt'] > 0;
+            
+            if ($profile_allowed) {
                 return true;
             }
         }
@@ -401,5 +434,84 @@ class ReportItem extends \CommonDBTM {
         }
         
         return $groups;
+    }
+
+    /**
+     * Obtém lista de todos os perfis do GLPI
+     */
+    public static function getAllGlpiProfiles() {
+        global $DB;
+        
+        $profiles = [];
+        
+        try {
+            $iterator = $DB->request([
+                'SELECT' => ['id', 'name'],
+                'FROM' => 'glpi_profiles',
+                'ORDER' => ['name']
+            ]);
+            
+            foreach ($iterator as $row) {
+                $profiles[$row['id']] = $row['name'];
+            }
+        } catch (\Throwable $e) {
+            error_log('Erro ao buscar perfis GLPI: ' . $e->getMessage());
+        }
+        
+        return $profiles;
+    }
+
+    /**
+     * Obtém os perfis autorizados para um relatório
+     */
+    public static function getReportProfiles($report_id) {
+        global $DB;
+        
+        $profiles = [];
+        
+        try {
+            $iterator = $DB->request([
+                'SELECT' => ['profiles_id'],
+                'FROM' => 'glpi_plugin_powerbireports_reports_profiles',
+                'WHERE' => ['plugin_powerbireports_reports_id' => $report_id]
+            ]);
+            
+            foreach ($iterator as $row) {
+                $profiles[] = $row['profiles_id'];
+            }
+        } catch (\Throwable $e) {
+            error_log('Erro ao buscar perfis do relatório: ' . $e->getMessage());
+        }
+        
+        return $profiles;
+    }
+
+    /**
+     * Sincroniza os perfis autorizados de um relatório
+     */
+    public static function syncProfiles($report_id, $profiles_ids) {
+        global $DB;
+        
+        try {
+            // Remove todos os perfis atuais
+            $DB->delete('glpi_plugin_powerbireports_reports_profiles', [
+                'plugin_powerbireports_reports_id' => $report_id
+            ]);
+            
+            // Adiciona os novos perfis
+            if (!empty($profiles_ids) && is_array($profiles_ids)) {
+                foreach ($profiles_ids as $profile_id) {
+                    $DB->insert('glpi_plugin_powerbireports_reports_profiles', [
+                        'plugin_powerbireports_reports_id' => $report_id,
+                        'profiles_id' => $profile_id
+                    ]);
+                }
+            }
+            
+            return true;
+        } catch (\Throwable $e) {
+            error_log('Erro ao sincronizar perfis: ' . $e->getMessage());
+            return false;
+        }
     }
 }
